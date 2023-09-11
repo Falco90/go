@@ -24,7 +24,8 @@ struct Game {
     game_id: felt252,
     winner: Option<Color>,
     white: ContractAddress,
-    black: ContractAddress
+    black: ContractAddress,
+    board_size: u32
 }
 
 #[derive(Component, Drop, Serde, SerdeLen)]

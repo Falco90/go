@@ -6,10 +6,38 @@ mod place_stone_system {
 
 
     fn execute(ctx: Context, x: u32, y: u32, caller: ContractAddress, game_id: felt252) {
+        let game = get!(ctx.world, (game_id), (Game));
+        let point = get!(ctx.world, (game_id, x, y), (Point));
+
+        assert(!is_out_of_board(x, y, game.board_size), 'Should be inside board');
+
+        assert(is_point_empty(point), 'Point should be empty');
+
         set!(
             ctx.world,
             (Point { game_id: game_id, x: x, y: y, owned_by: Option::Some(Color::White(())) })
         );
+    }
+
+    fn is_point_empty(point: Point) -> bool {
+        match point.owned_by {
+            Option::Some(owner) => {
+                return false;
+            },
+            Option::None(_) => {
+                return true;
+            }
+        }
+    }
+
+    fn is_out_of_board(x: u32, y: u32, board_size: u32) -> bool {
+        if x >= board_size || x < 0 {
+            return true;
+        }
+        if y >= board_size || y < 0 {
+            return true;
+        }
+        false
     }
 }
 

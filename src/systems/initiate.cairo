@@ -18,6 +18,7 @@ mod initiate_system {
                     winner: Option::None(()),
                     white: white_address,
                     black: black_address,
+                    board_size: board_size
                 },
                 GameTurn { game_id: game_id, turn: Color::White(()) }
             )
