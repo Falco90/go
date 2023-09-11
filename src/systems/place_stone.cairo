@@ -6,8 +6,11 @@ mod place_stone_system {
 
 
     fn execute(ctx: Context, x: u32, y: u32, caller: ContractAddress, game_id: felt252) {
-        let game = get!(ctx.world, (game_id), (Game));
+        let mut game = get!(ctx.world, (game_id), (Game));
         let point = get!(ctx.world, (game_id, x, y), (Point));
+        let game_turn = get!(ctx.world, (game_id), (GameTurn));
+
+        assert(is_correct_turn(caller, game_turn, ref game), 'Not correct turn');
 
         assert(!is_out_of_board(x, y, game.board_size), 'Should be inside board');
 
@@ -35,6 +38,16 @@ mod place_stone_system {
             return true;
         }
         if y >= board_size || y < 0 {
+            return true;
+        }
+        false
+    }
+
+    fn is_correct_turn(caller: ContractAddress, game_turn: GameTurn, ref game: Game) -> bool {
+        if caller == game.white && game_turn.turn == Color::White {
+            return true;
+        }
+        if caller == game.black && game_turn.turn == Color::Black {
             return true;
         }
         false
