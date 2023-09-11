@@ -1,5 +1,5 @@
 mod initiate;
-mod move;
+mod place_stone;
 
 use initiate::initiate_system;
-use move::move_system;
+use place_stone::place_stone_system;
