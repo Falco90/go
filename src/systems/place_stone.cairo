@@ -76,6 +76,7 @@ mod tests {
 
     use go::systems::initiate_system;
     use go::systems::place_stone_system;
+    use go::systems::change_turn_system;
     use array::ArrayTrait;
     use core::traits::Into;
     use dojo::world::IWorldDispatcherTrait;
@@ -98,6 +99,7 @@ mod tests {
         let mut systems = array::ArrayTrait::new();
         systems.append(initiate_system::TEST_CLASS_HASH);
         systems.append(place_stone_system::TEST_CLASS_HASH);
+        systems.append(change_turn_system::TEST_CLASS_HASH);
         let world = spawn_test_world(components, systems);
 
         // initiate
@@ -124,6 +126,22 @@ mod tests {
                 assert(owner == Color::White, '[3,3] should be owned by white');
             },
             Option::None(_) => assert(false, 'should have stone in [3,3]'),
+        };
+
+        // Change turn to Black
+        let mut change_turn_calldata = array::ArrayTrait::<core::felt252>::new();
+        change_turn_calldata.append(white.into());
+        change_turn_calldata.append(game_id);
+        world.execute('change_turn_system'.into(), change_turn_calldata);
+
+
+     //It's Black's turn now
+        let game_turn = get!(world, (game_id), (GameTurn));
+        match game_turn.turn {
+            Color::White => assert(false, 'should be Black turn'),
+            Color::Black => {
+                assert(true, 'Should be Black turn');
+            },
         };
     }
 }
