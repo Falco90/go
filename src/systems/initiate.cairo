@@ -1,12 +1,13 @@
 #[system]
 mod initiate_system {
+    use debug::PrintTrait;
     use array::ArrayTrait;
     use traits::Into;
     use dojo::world::Context;
     use starknet::ContractAddress;
     use go::components::{Game, GameTurn, Color, Point};
 
-    fn execute(ctx: Context, white_address: ContractAddress, black_address: ContractAddress) {
+    fn execute(ctx: Context, white_address: ContractAddress, black_address: ContractAddress, board_size: u32) {
         let game_id = pedersen(white_address.into(), black_address.into());
 
         set!(
@@ -26,16 +27,17 @@ mod initiate_system {
         let mut y: usize = 0;
 
         loop {
-            if y > 8 {
+            if y >= board_size {
                 break;
             }
             loop {
-                if x > 8 {
+                if x >= board_size {
                     y += 1;
+                    x = 0;
                     break;
                 }
                 set!(
-                    ctx.world, (Point { game_id: game_id, x: 0, y: 0, owned_by: Option::None(()) })
+                    ctx.world, (Point { game_id: game_id, x: x, y: y, owned_by: Option::None(()) })
                 );
                 x += 1;
             };
@@ -60,6 +62,7 @@ mod tests {
     fn test_initiate() {
         let white = starknet::contract_address_const::<0x01>();
         let black = starknet::contract_address_const::<0x02>();
+        let board_size: u32 = 19;
 
         // components
         let mut components = array::ArrayTrait::new();
@@ -75,6 +78,7 @@ mod tests {
         let mut calldata = array::ArrayTrait::<core::felt252>::new();
         calldata.append(white.into());
         calldata.append(black.into());
+        calldata.append(board_size.into());
         world.execute('initiate_system'.into(), calldata);
 
         let game_id = pedersen(white.into(), black.into());
@@ -84,20 +88,20 @@ mod tests {
         assert(game.white == white, 'white address is incorrect');
         assert(game.black == black, 'black address is incorrect');
 
-        //get top-left Point
-        let top_left = get!(world, (game_id, 0, 0), (Point));
-        match top_left.owned_by {
-            Option::Some(piece) => {
-                assert(false, 'should not be owned');
+        //get bottom-left Point
+        let bottom_left = get!(world, (game_id, 0, 0), (Point));
+        match bottom_left.owned_by {
+            Option::Some(_) => {
+                assert(false, 'bottom left must empty');
             },
             Option::None(_) => assert(true, 'should be empty'),
         };
 
-        //get bottom-right Point
-        let bottom_right = get!(world, (game_id, 0, 0), (Point));
-        match bottom_right.owned_by {
-            Option::Some(piece) => {
-                assert(false, 'should not be owned');
+        //get top-right Point
+        let top_right = get!(world, (game_id, 18, 18), (Point));
+        match top_right.owned_by {
+            Option::Some(_) => {
+                assert(false, 'top right not empty');
             },
             Option::None(_) => assert(true, 'should be empty'),
         };
