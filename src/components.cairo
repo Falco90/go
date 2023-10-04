@@ -36,6 +36,34 @@ struct GameTurn {
     turn: Color
 }
 
+#[generate_trait]
+impl PointTraitImpl of PointTrait {
+    fn has_liberties(self: Point) -> bool {
+        // check for x + 1, x - 1, y + 1 and y - 1 if the space is empty.
+        let point_left = get!(ctx.world, (self.game_id, self.x - 1, self.y), (Point));
+        if point_left.owned_by == Option::<Color>::None {
+            return true;
+        };
+
+        let point_right = get!(ctx.world, (self.game_id, self.x + 1, self.y), (Point));
+        if point_left.owned_by == Option::<Color>::None {
+            return true;
+        };
+
+        let point_top = get!(ctx.world, (self.game_id, self.x, self.y + 1), (Point));
+        if point_top.owned_by == Option::<Color>::None {
+            return true;
+        };
+
+        let point_bottom = get!(ctx.world, (self.game_id, self.x, self.y - 1), (Point));
+        if point_bottom.owned_by == Option::<Color>::None {
+            return true;
+        };
+
+        false
+    }
+}
+
 impl ColorOptionSerdeLen of dojo::SerdeLen<Option<Color>> {
     #[inline(always)]
     fn len() -> usize {
