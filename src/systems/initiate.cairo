@@ -6,8 +6,14 @@ mod initiate_system {
     use dojo::world::Context;
     use starknet::ContractAddress;
     use go::components::{Game, GameTurn, Color, Point};
+    use core::pedersen::{pedersen};
 
-    fn execute(ctx: Context, white_address: ContractAddress, black_address: ContractAddress, board_size: u32) {
+    fn execute(
+        ctx: Context,
+        white_address: ContractAddress,
+        black_address: ContractAddress,
+        board_size: u32,
+    ) {
         let game_id = pedersen(white_address.into(), black_address.into());
 
         set!(
@@ -18,7 +24,7 @@ mod initiate_system {
                     winner: Option::None(()),
                     white: white_address,
                     black: black_address,
-                    board_size: board_size
+                    board_size: board_size,
                 },
                 GameTurn { game_id: game_id, turn: Color::White(()) }
             )
@@ -26,6 +32,7 @@ mod initiate_system {
 
         let mut x: usize = 0;
         let mut y: usize = 0;
+        let mut index: u32 = 0;
 
         loop {
             if y >= board_size {
@@ -37,14 +44,14 @@ mod initiate_system {
                     x = 0;
                     break;
                 }
-                set!(
-                    ctx.world, (Point { game_id: game_id, x: x, y: y, owned_by: Option::None(()) })
-                );
+                set!(ctx.world, (Point { game_id, x, y, owned_by: Option::None(()) }));
                 x += 1;
+                index += 1;
             };
-        }
+        };
     }
 }
+
 
 #[cfg(test)]
 mod tests {
@@ -57,6 +64,7 @@ mod tests {
     use core::traits::Into;
     use dojo::world::IWorldDispatcherTrait;
     use core::array::SpanTrait;
+    use core::pedersen::{pedersen};
 
     #[test]
     #[available_gas(3000000000000000)]
@@ -99,7 +107,7 @@ mod tests {
         };
 
         //get top-right Point
-        let top_right = get!(world, (game_id, 18, 18), (Point));
+        let top_right = get!(world, (game_id, board_size - 1, board_size - 1), (Point));
         match top_right.owned_by {
             Option::Some(_) => {
                 assert(false, 'top right not empty');

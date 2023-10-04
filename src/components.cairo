@@ -1,7 +1,8 @@
 use debug::PrintTrait;
+use array::ArrayTrait;
 use starknet::ContractAddress;
 
-#[derive(Component, Drop, SerdeLen, Serde)]
+#[derive(Component, Copy, Drop, SerdeLen, Serde)]
 struct Point {
     #[key]
     game_id: felt252,
@@ -12,7 +13,7 @@ struct Point {
     owned_by: Option<Color>
 }
 
-#[derive(Component, Drop, Serde,  PartialEq)]
+#[derive(Component, Copy, Drop, Serde, PartialEq)]
 enum Color {
     White,
     Black
@@ -25,7 +26,7 @@ struct Game {
     winner: Option<Color>,
     white: ContractAddress,
     black: ContractAddress,
-    board_size: u32
+    board_size: u32,
 }
 
 #[derive(Component, Drop, Serde, SerdeLen)]
@@ -34,7 +35,6 @@ struct GameTurn {
     game_id: felt252,
     turn: Color
 }
-
 
 impl ColorOptionSerdeLen of dojo::SerdeLen<Option<Color>> {
     #[inline(always)]
