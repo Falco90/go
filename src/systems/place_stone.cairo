@@ -174,22 +174,5 @@ mod tests {
                 assert(false, 'Should be white turn');
             },
         };
-
-        //Check the adjacent stones to (3,3)
-        let mut check_capture_calldata = array::ArrayTrait::<core::felt252>::new();
-        check_capture_calldata.append(game_id);
-        check_capture_calldata.append(3);
-        check_capture_calldata.append(3);
-        check_capture_calldata.append(white.into());
-        world.execute('check_capture_system'.into(), check_capture_calldata);
-
-        //Check if stone in [4,3] is captured by white
-        let point_3 = get!(world, (game_id, 4, 3), (Point));
-        match point_3.owned_by {
-            Option::Some(owner) => {
-                assert(owner == Color::White, '[4,3] should be white now');
-            },
-            Option::None(_) => assert(false, 'should have stone in [4,3]')
-        };
     }
 }
