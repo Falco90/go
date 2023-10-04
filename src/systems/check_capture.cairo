@@ -9,10 +9,8 @@ mod check_capture_system {
 
 
     fn execute(ctx: Context, game_id: felt252, x: u32, y: u32, caller: ContractAddress) {
-
         // Point to the right
-        let new_x_r = x + 1;
-        let point_right: Point = get!(ctx.world, (game_id, new_x_r, y), (Point));
+        let point_right: Point = get!(ctx.world, (game_id, x + 1, y), (Point));
 
         match point_right.owned_by {
             Option::Some(owner) => {
@@ -23,7 +21,7 @@ mod check_capture_system {
                             ctx.world,
                             (Point {
                                 game_id: game_id,
-                                x: new_x_r,
+                                x: x + 1,
                                 y: y,
                                 owned_by: Option::Some(Color::White(()))
                             })
@@ -35,8 +33,73 @@ mod check_capture_system {
         };
 
         // Point to the left
-        let new_x_l = x - 1;
-        let point_left: Point = get!(ctx.world, (game_id, new_x_l, y), (Point));
+        let point_left: Point = get!(ctx.world, (game_id, x - 1, y), (Point));
+
+        match point_left.owned_by {
+            Option::Some(owner) => {
+                match owner {
+                    Color::White => {},
+                    Color::Black => {
+                        set!(
+                            ctx.world,
+                            (Point {
+                                game_id: game_id,
+                                x: x - 1,
+                                y: y,
+                                owned_by: Option::Some(Color::White(()))
+                            })
+                        );
+                    }
+                }
+            },
+            Option::None(_) => {}
+        }
+
+        // Point to the top
+        let point_top: Point = get!(ctx.world, (game_id, x, y + 1), (Point));
+
+        match point_top.owned_by {
+            Option::Some(owner) => {
+                match owner {
+                    Color::White => {},
+                    Color::Black => {
+                        set!(
+                            ctx.world,
+                            (Point {
+                                game_id: game_id,
+                                x: x,
+                                y: y + 1,
+                                owned_by: Option::Some(Color::White(()))
+                            })
+                        );
+                    }
+                }
+            },
+            Option::None(_) => {}
+        }
+
+        // Point to the bottom
+        let point_bottom: Point = get!(ctx.world, (game_id, x, y - 1), (Point));
+
+        match point_top.owned_by {
+            Option::Some(owner) => {
+                match owner {
+                    Color::White => {},
+                    Color::Black => {
+                        set!(
+                            ctx.world,
+                            (Point {
+                                game_id: game_id,
+                                x: x,
+                                y: y - 1,
+                                owned_by: Option::Some(Color::White(()))
+                            })
+                        );
+                    }
+                }
+            },
+            Option::None(_) => {}
+        }
     }
 }
 
@@ -166,6 +229,33 @@ mod tests {
                 assert(owner == Color::White, '[4,3] should be white now');
             },
             Option::None(_) => assert(false, 'should have stone in [4,3]')
+        };
+
+        //Check if stone in [2,3] does not get captured by white
+        let point_4 = get!(world, (game_id, 2, 3), (Point));
+        match point_4.owned_by {
+            Option::Some(owner) => {
+                assert(false, '[2,3] should not have owner');
+            },
+            Option::None(_) => assert(true, 'should not have stone in [2,3]')
+        };
+
+        //Check if stone in [3,4] does not get captured by white
+        let point_top = get!(world, (game_id, 3, 4), (Point));
+        match point_top.owned_by {
+            Option::Some(owner) => {
+                assert(false, '[3,4] should not have owner');
+            },
+            Option::None(_) => assert(true, 'should not have stone in [2,3]')
+        };
+
+        //Check if stone in [3,2] does not get captured by white
+        let point_bottom = get!(world, (game_id, 3, 2), (Point));
+        match point_bottom.owned_by {
+            Option::Some(owner) => {
+                assert(false, '[3,2] should not have owner');
+            },
+            Option::None(_) => assert(true, 'should not have stone in [3,2]')
         };
     }
 }
