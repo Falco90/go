@@ -6,31 +6,96 @@ mod check_capture_system {
     use starknet::ContractAddress;
     use go::components::{Game, GameTurn, Color, Point};
     use debug::PrintTrait;
+    use array::ArrayTrait;
+    use dict::Felt252DictTrait;
+    use nullable::{nullable_from_box, match_nullable, FromNullableResult};
 
 
     fn execute(ctx: Context, game_id: felt252, x: u32, y: u32, caller: ContractAddress) {
+        //Check for points left, right, top and bottom to see if they have liberties. Call has_liberties(point_right) etc..
+        //If not, check if the stones near them with the same color have liberties.
+        //Repeat for all the connected stones
+        //If none of the connected stones of the same color have liberties. Capture all of them -> remove them from the board and add points
+        let game: Game = get!(ctx.world, (game_id), (Game));
+        let mut opponent: Color = Color::White;
+
+        if caller == game.white {
+            opponent = Color::Black;
+        }
+
         // Point to the right
         let point_right: Point = get!(ctx.world, (game_id, x + 1, y), (Point));
 
         match point_right.owned_by {
             Option::Some(owner) => {
-                match owner {
-                    Color::White => {},
-                    Color::Black => {
-                        set!(
-                            ctx.world,
-                            (Point {
-                                game_id: game_id,
-                                x: x + 1,
-                                y: y,
-                                owned_by: Option::Some(Color::White(()))
-                            })
-                        );
-                    },
+                if owner == opponent && !has_liberties(point_right, ctx, game_id) {
+                    // if all connected points are checked and none of them have liberties, capture
+                    //Keep track of things to capture
+                    let mut prisoners: Felt252Dict<Nullable<Point>> = Default::default();
+                    //create stack for recursive algoritm
+                    let mut stack: Array<Point> = ArrayTrait::<Point>::new();
+
+                    let mut index: u32 = 0;
+
+                    let mut point: Point = get!(
+                        ctx.world, (game_id, point_right.x + 1, point_right.y), (Point)
+                    );
+
+                    //loop through the stack.
+                    loop {
+                        match stack.pop_front() {
+                            Option::Some(point) => {
+                                if has_liberties(point, ctx, game_id) {
+                                    break;
+                                }
+                                let new_point = get!(
+                                    ctx.world, (game_id, point.x + 1, point_y), (Point)
+                                );
+                                match new_point.owned_by {
+                                    Option::Some(owner) => {
+                                        if owner == opponent {
+                                            stack.append(point);
+                                        }
+                                    },
+                                    Option::None(_) => {
+                                        break;
+                                    }
+                                }
+                            },
+                            Option::None(_) => {
+                                break;
+                            }
+                        }
+
+                        stack.append(point);
+                        prisoners.insert(index.into(), nullable_from_box(BoxTrait::new(point)));
+                    }
                 }
             },
             Option::None(_) => {}
-        };
+        }
+
+        if !has_liberties(point_right, ctx, game_id) {
+            match point_right.owned_by {
+                Option::Some(owner) => {
+                    match owner {
+                        Color::White => {},
+                        Color::Black => {
+                            set!(
+                                ctx.world,
+                                (Point {
+                                    game_id: game_id,
+                                    x: x + 1,
+                                    y: y,
+                                    owned_by: Option::Some(Color::White(()))
+                                })
+                            );
+                        },
+                    }
+                },
+                Option::None(_) => {}
+            };
+        }
 
         // Point to the left
         let point_left: Point = get!(ctx.world, (game_id, x - 1, y), (Point));
@@ -100,6 +165,31 @@ mod check_capture_system {
             },
             Option::None(_) => {}
         }
+    }
+
+    fn has_liberties(self: Point, ctx: Context, game_id: felt252) -> bool {
+        // check for x + 1, x - 1, y + 1 and y - 1 if the space is empty.
+        let point_left = get!(ctx.world, (self.game_id, self.x - 1, self.y), (Point));
+        if point_left.owned_by == Option::<Color>::None {
+            return true;
+        };
+
+        let point_right = get!(ctx.world, (self.game_id, self.x + 1, self.y), (Point));
+        if point_left.owned_by == Option::<Color>::None {
+            return true;
+        };
+
+        let point_top = get!(ctx.world, (self.game_id, self.x, self.y + 1), (Point));
+        if point_top.owned_by == Option::<Color>::None {
+            return true;
+        };
+
+        let point_bottom = get!(ctx.world, (self.game_id, self.x, self.y - 1), (Point));
+        if point_bottom.owned_by == Option::<Color>::None {
+            return true;
+        };
+
+        false
     }
 }
 
