@@ -21,13 +21,13 @@ impl PointTraitImpl of PointTrait {
         if self.x + 1 < board_size {
             adjacent_coords.append((self.x + 1, self.y));
         }
-        if self.x - 1 >= 0 {
+        if self.x > 0 {
             adjacent_coords.append((self.x - 1, self.y));
         }
         if self.y + 1 < board_size {
             adjacent_coords.append((self.x, self.y + 1));
         }
-        if self.y - 1 >= 0 {
+        if self.y > 0 {
             adjacent_coords.append((self.x, self.y - 1));
         }
 

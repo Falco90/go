@@ -97,7 +97,7 @@ mod capture_system {
         let mut index: u32 = 0;
 
         loop {
-            if index > adjacent_coords.len() {
+            if index == adjacent_coords.len() {
                 break;
             };
 
@@ -167,22 +167,30 @@ mod tests {
 
         let game_id = pedersen(white.into(), black.into());
 
-        // Place white stone in [3,3]
+        // Place white stone in [0,1]
         let mut place_stone_calldata = array::ArrayTrait::<core::felt252>::new();
-        place_stone_calldata.append(3);
-        place_stone_calldata.append(3);
+        place_stone_calldata.append(0);
+        place_stone_calldata.append(1);
         place_stone_calldata.append(white.into());
         place_stone_calldata.append(game_id);
         world.execute('place_stone_system'.into(), place_stone_calldata);
 
-        //White stone is in (3,3)
-        let point = get!(world, (game_id, 3, 3), (Point));
+        //White stone is in (0,1)
+        let point = get!(world, (game_id, 0, 1), (Point));
         match point.owned_by {
             Option::Some(owner) => {
                 assert(owner == Color::White, '[3,3] should be owned by white');
             },
             Option::None(_) => assert(false, 'should have stone in [3,3]'),
         };
+
+        //Check if any adjacent stones to [0,1] can get captured
+        let mut capture_calldata = array::ArrayTrait::<core::felt252>::new();
+        capture_calldata.append(game_id);
+        capture_calldata.append(0);
+        capture_calldata.append(1);
+        capture_calldata.append(white.into());
+        world.execute('capture_system'.into(), capture_calldata);
 
         // Change turn to Black
         let mut change_turn_calldata = array::ArrayTrait::<core::felt252>::new();
@@ -199,16 +207,16 @@ mod tests {
             },
         };
 
-        //Place Black stone in [4,3]
+        //Place Black stone in [0,0]
         let mut place_stone_calldata_2 = array::ArrayTrait::<core::felt252>::new();
-        place_stone_calldata_2.append(4);
-        place_stone_calldata_2.append(3);
+        place_stone_calldata_2.append(0);
+        place_stone_calldata_2.append(0);
         place_stone_calldata_2.append(black.into());
         place_stone_calldata_2.append(game_id);
         world.execute('place_stone_system'.into(), place_stone_calldata_2);
 
-        //Check Black stone in [4,3]
-        let point_2 = get!(world, (game_id, 4, 3), (Point));
+        //Check Black stone in [0,0]
+        let point_2 = get!(world, (game_id, 0, 0), (Point));
         match point_2.owned_by {
             Option::Some(owner) => {
                 assert(owner == Color::Black, '[4,3] should be owned by black');
@@ -216,7 +224,7 @@ mod tests {
             Option::None(_) => assert(false, 'should have stone in [4,3]'),
         };
 
-        // Change turn to Black
+        // Change turn to White
         let mut change_turn_calldata = array::ArrayTrait::<core::felt252>::new();
         change_turn_calldata.append(black.into());
         change_turn_calldata.append(game_id);
@@ -231,48 +239,29 @@ mod tests {
             },
         };
 
-        //Check the adjacent stones to (3,3)
-        let mut capture_calldata = array::ArrayTrait::<core::felt252>::new();
-        capture_calldata.append(game_id);
-        capture_calldata.append(3);
-        capture_calldata.append(3);
-        capture_calldata.append(white.into());
-        world.execute('capture_system'.into(), capture_calldata);
+        //White places stone in [1,0]
+        let mut place_stone_calldata = array::ArrayTrait::<core::felt252>::new();
+        place_stone_calldata.append(1);
+        place_stone_calldata.append(0);
+        place_stone_calldata.append(white.into());
+        place_stone_calldata.append(game_id);
+        world.execute('place_stone_system'.into(), place_stone_calldata);
 
-        //Check if stone in [4,3] is captured by white
-        let point_3 = get!(world, (game_id, 4, 3), (Point));
-        match point_3.owned_by {
-            Option::Some(owner) => {
-                assert(owner == Color::White, '[4,3] should be white now');
-            },
-            Option::None(_) => assert(false, 'should have stone in [4,3]')
-        };
+        //Check if adjacent stones to [1,0] can get captured
+        let mut capture_calldata_2 = array::ArrayTrait::<core::felt252>::new();
+        capture_calldata_2.append(game_id);
+        capture_calldata_2.append(1);
+        capture_calldata_2.append(0);
+        capture_calldata_2.append(white.into());
+        world.execute('capture_system'.into(), capture_calldata_2);
 
-        //Check if stone in [2,3] does not get captured by white
-        let point_4 = get!(world, (game_id, 2, 3), (Point));
-        match point_4.owned_by {
+        //Check if stone in [0,0] gets captured by white
+        let point_to_capture = get!(world, (game_id, 0, 0), (Point));
+        match point_to_capture.owned_by {
             Option::Some(owner) => {
-                assert(false, '[2,3] should not have owner');
+                assert(false, '[0,0] should not have owner');
             },
-            Option::None(_) => assert(true, 'should not have stone in [2,3]')
-        };
-
-        //Check if stone in [3,4] does not get captured by white
-        let point_top = get!(world, (game_id, 3, 4), (Point));
-        match point_top.owned_by {
-            Option::Some(owner) => {
-                assert(false, '[3,4] should not have owner');
-            },
-            Option::None(_) => assert(true, 'should not have stone in [2,3]')
-        };
-
-        //Check if stone in [3,2] does not get captured by white
-        let point_bottom = get!(world, (game_id, 3, 2), (Point));
-        match point_bottom.owned_by {
-            Option::Some(owner) => {
-                assert(false, '[3,2] should not have owner');
-            },
-            Option::None(_) => assert(true, 'should not have stone in [3,2]')
+            Option::None(_) => assert(true, 'should not have stone in [0,0]')
         };
     }
 }
