@@ -33,9 +33,7 @@ mod check_capture_system {
             let adjacent_point = get!(ctx.world, (game_id, x, y), (Point));
             let mut visited: Felt252Dict<u8> = Default::default();
             if !has_liberties(adjacent_point, ctx, game.board_size, opponent, ref visited) {
-                'has no liberties'.print();
-
-                //if no liberties, capture!!
+                capture(adjacent_point, ctx, game.board_size, opponent, ref visited);
             };
 
             index += 1;
@@ -45,14 +43,13 @@ mod check_capture_system {
     fn has_liberties(
         point: Point, ctx: Context, board_size: u32, opponent: Color, ref visited: Felt252Dict<u8>
     ) -> bool {
+        let id = point.create_unique_identifier();
+        visited.insert(id, 1);
+
         let adjacent_coords: Array<(u32, u32)> = point.get_adjacent_coords(board_size);
         let mut has_liberties: bool = false;
         let mut index: u32 = 0;
 
-        let id = point.create_unique_identifier();
-        visited.insert(id, 1);
-
-        let mut key: felt252 = point.x.into();
         loop {
             if index == adjacent_coords.len() {
                 break;
@@ -78,11 +75,49 @@ mod check_capture_system {
                     break;
                 }
             }
-
+            visited.insert(adjacent_point_id, 1);
             index += 1;
         };
 
         has_liberties
+    }
+
+    fn capture(
+        point: Point, ctx: Context, board_size: u32, opponent: Color, ref visited: Felt252Dict<u8>
+    ) {
+        let id = point.create_unique_identifier();
+        visited.insert(id, 1);
+
+        set!(
+            ctx.world,
+            (Point { game_id: point.game_id, x: point.x, y: point.y, owned_by: Option::None(()) })
+        );
+
+        let adjacent_coords: Array<(u32, u32)> = point.get_adjacent_coords(board_size);
+        let mut index: u32 = 0;
+
+        loop {
+            if index > adjacent_coords.len() {
+                break;
+            };
+
+            let (x, y) = *adjacent_coords.at(index);
+            let adjacent_point = get!(ctx.world, (point.game_id, x, y), (Point));
+            let adjacent_point_id = adjacent_point.create_unique_identifier();
+
+            let already_visited = visited.get(adjacent_point_id) == 1;
+
+            match adjacent_point.owned_by {
+                Option::Some(owner) => {
+                    if owner == opponent && !already_visited {
+                        capture(adjacent_point, ctx, board_size, opponent, ref visited);
+                    };
+                },
+                Option::None(_) => {}
+            }
+            visited.insert(adjacent_point_id, 1);
+            index += 1;
+        };
     }
 }
 
