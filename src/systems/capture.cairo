@@ -5,7 +5,7 @@ mod capture_system {
     use core::traits::TryInto;
     use dojo::world::Context;
     use starknet::ContractAddress;
-    use go::components::{Game, GameTurn, Color, Point};
+    use go::components::{Game, GameTurn, Color, Point, Score};
     use debug::PrintTrait;
     use array::ArrayTrait;
     use dict::Felt252DictTrait;
@@ -33,7 +33,10 @@ mod capture_system {
             let adjacent_point = get!(ctx.world, (game_id, x, y), (Point));
             let mut visited: Felt252Dict<u8> = Default::default();
             if !has_liberties(adjacent_point, ctx, game.board_size, opponent, ref visited) {
-                capture(adjacent_point, ctx, game.board_size, opponent, ref visited);
+                let captured_amount = capture(
+                    adjacent_point, ctx, game.board_size, opponent, ref visited
+                );
+                increase_score(ctx, opponent, game_id, captured_amount);
             };
 
             index += 1;
@@ -84,7 +87,7 @@ mod capture_system {
 
     fn capture(
         point: Point, ctx: Context, board_size: u32, opponent: Color, ref visited: Felt252Dict<u8>
-    ) {
+    ) -> u32 {
         let id = point.create_unique_identifier();
         visited.insert(id, 1);
 
@@ -118,6 +121,37 @@ mod capture_system {
             visited.insert(adjacent_point_id, 1);
             index += 1;
         };
+        
+        let captured_amount = index - 1;
+
+        captured_amount
+    }
+
+    fn increase_score(ctx: Context, opponent: Color, game_id: felt252, amount: u32) {
+        let prev_score = get!(ctx.world, (game_id), (Score));
+
+        match opponent {
+            Color::White => {
+                set!(
+                    ctx.world,
+                    (Score {
+                        game_id: prev_score.game_id,
+                        white: prev_score.white,
+                        black: prev_score.black + amount
+                    })
+                )
+            },
+            Color::Black => {
+                set!(
+                    ctx.world,
+                    (Score {
+                        game_id: prev_score.game_id,
+                        white: prev_score.white + amount,
+                        black: prev_score.black
+                    })
+                )
+            }
+        }
     }
 }
 
@@ -125,7 +159,7 @@ mod capture_system {
 mod tests {
     use starknet::ContractAddress;
     use dojo::test_utils::spawn_test_world;
-    use go::components::{Game, game, GameTurn, game_turn, Point, point, Color};
+    use go::components::{Game, game, GameTurn, game_turn, Point, point, Color, Score, score};
 
     use go::systems::initiate_system;
     use go::systems::place_stone_system;
@@ -149,6 +183,7 @@ mod tests {
         components.append(game::TEST_CLASS_HASH);
         components.append(game_turn::TEST_CLASS_HASH);
         components.append(point::TEST_CLASS_HASH);
+        components.append(score::TEST_CLASS_HASH);
 
         //systems
         let mut systems = array::ArrayTrait::new();
@@ -263,5 +298,8 @@ mod tests {
             },
             Option::None(_) => assert(true, 'should not have stone in [0,0]')
         };
+        //Check if white score increased by correct amount
+        let score: Score = get!(world, (game_id), (Score));
+        assert(score.white == 1, 'should have captured one stone');
     }
 }

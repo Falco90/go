@@ -5,7 +5,7 @@ mod initiate_system {
     use traits::Into;
     use dojo::world::Context;
     use starknet::ContractAddress;
-    use go::components::{Game, GameTurn, Color, Point};
+    use go::components::{Game, GameTurn, Color, Point, Score};
     use core::pedersen::{pedersen};
 
     fn execute(
@@ -26,7 +26,8 @@ mod initiate_system {
                     black: black_address,
                     board_size: board_size,
                 },
-                GameTurn { game_id: game_id, turn: Color::White(()) }
+                GameTurn { game_id: game_id, turn: Color::White(()) },
+                Score { game_id: game_id, white: 0, black: 0}
             )
         );
 
@@ -57,7 +58,7 @@ mod initiate_system {
 mod tests {
     use starknet::ContractAddress;
     use dojo::test_utils::spawn_test_world;
-    use go::components::{Game, game, Point, point, GameTurn, game_turn};
+    use go::components::{Game, game, Point, point, GameTurn, game_turn, Score, score};
 
     use go::systems::initiate_system;
     use array::ArrayTrait;
@@ -78,6 +79,7 @@ mod tests {
         components.append(game::TEST_CLASS_HASH);
         components.append(game_turn::TEST_CLASS_HASH);
         components.append(point::TEST_CLASS_HASH);
+        components.append(score::TEST_CLASS_HASH);
 
         //systems
         let mut systems = array::ArrayTrait::new();
@@ -114,5 +116,9 @@ mod tests {
             },
             Option::None(_) => assert(true, 'should be empty'),
         };
+
+        //get score
+        let score = get!(world, (game_id), (Score));
+        assert(score.white == 0, 'should be 0');
     }
 }

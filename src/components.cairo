@@ -62,6 +62,14 @@ struct GameTurn {
     turn: Color
 }
 
+#[derive(Component, Drop, Serde, SerdeLen)]
+struct Score {
+    #[key]
+    game_id: felt252,
+    white: u32,
+    black: u32
+}
+
 impl ColorOptionSerdeLen of dojo::SerdeLen<Option<Color>> {
     #[inline(always)]
     fn len() -> usize {
