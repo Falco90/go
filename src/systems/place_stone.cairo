@@ -75,7 +75,7 @@ mod tests {
     use go::systems::initiate_system;
     use go::systems::place_stone_system;
     use go::systems::change_turn_system;
-    use go::systems::check_capture_system;
+    use go::systems::capture_system;
     use array::ArrayTrait;
     use core::traits::Into;
     use dojo::world::IWorldDispatcherTrait;
