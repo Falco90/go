@@ -1,6 +1,7 @@
 //Check if the placed stone triggers a capture by checking if the adjacent string has any room left.
 #[system]
 mod check_capture_system {
+    use go::components::PointTrait;
     use core::traits::TryInto;
     use dojo::world::Context;
     use starknet::ContractAddress;
@@ -28,7 +29,7 @@ mod check_capture_system {
 
         match point_right.owned_by {
             Option::Some(owner) => {
-                if owner == opponent && !has_liberties(point_right, ctx, game_id) {
+                if owner == opponent && !has_liberties(point_right, ctx, game_id, game.board_size) {
                     // if all connected points are checked and none of them have liberties, capture
                     //Keep track of things to capture
                     let mut prisoners: Felt252Dict<Nullable<Point>> = Default::default();
@@ -45,11 +46,11 @@ mod check_capture_system {
                     loop {
                         match stack.pop_front() {
                             Option::Some(point) => {
-                                if has_liberties(point, ctx, game_id) {
+                                if has_liberties(point, ctx, game_id, game.board_size) {
                                     break;
                                 }
                                 let new_point = get!(
-                                    ctx.world, (game_id, point.x + 1, point_y), (Point)
+                                    ctx.world, (game_id, point.x + 1, point.y), (Point)
                                 );
                                 match new_point.owned_by {
                                     Option::Some(owner) => {
@@ -75,7 +76,7 @@ mod check_capture_system {
             Option::None(_) => {}
         }
 
-        if !has_liberties(point_right, ctx, game_id) {
+        if !has_liberties(point_right, ctx, game_id, game.board_size) {
             match point_right.owned_by {
                 Option::Some(owner) => {
                     match owner {
@@ -96,100 +97,34 @@ mod check_capture_system {
                 Option::None(_) => {}
             };
         }
-
-        // Point to the left
-        let point_left: Point = get!(ctx.world, (game_id, x - 1, y), (Point));
-
-        match point_left.owned_by {
-            Option::Some(owner) => {
-                match owner {
-                    Color::White => {},
-                    Color::Black => {
-                        set!(
-                            ctx.world,
-                            (Point {
-                                game_id: game_id,
-                                x: x - 1,
-                                y: y,
-                                owned_by: Option::Some(Color::White(()))
-                            })
-                        );
-                    }
-                }
-            },
-            Option::None(_) => {}
-        }
-
-        // Point to the top
-        let point_top: Point = get!(ctx.world, (game_id, x, y + 1), (Point));
-
-        match point_top.owned_by {
-            Option::Some(owner) => {
-                match owner {
-                    Color::White => {},
-                    Color::Black => {
-                        set!(
-                            ctx.world,
-                            (Point {
-                                game_id: game_id,
-                                x: x,
-                                y: y + 1,
-                                owned_by: Option::Some(Color::White(()))
-                            })
-                        );
-                    }
-                }
-            },
-            Option::None(_) => {}
-        }
-
-        // Point to the bottom
-        let point_bottom: Point = get!(ctx.world, (game_id, x, y - 1), (Point));
-
-        match point_top.owned_by {
-            Option::Some(owner) => {
-                match owner {
-                    Color::White => {},
-                    Color::Black => {
-                        set!(
-                            ctx.world,
-                            (Point {
-                                game_id: game_id,
-                                x: x,
-                                y: y - 1,
-                                owned_by: Option::Some(Color::White(()))
-                            })
-                        );
-                    }
-                }
-            },
-            Option::None(_) => {}
-        }
     }
 
-    fn has_liberties(self: Point, ctx: Context, game_id: felt252) -> bool {
-        // check for x + 1, x - 1, y + 1 and y - 1 if the space is empty.
-        let point_left = get!(ctx.world, (self.game_id, self.x - 1, self.y), (Point));
-        if point_left.owned_by == Option::<Color>::None {
-            return true;
+    fn has_liberties(self: Point, ctx: Context, game_id: felt252, board_size: u32) -> bool {
+        let adjacent_coords = self.get_adjacent_coords();
+        let mut has_liberties = false;
+        let mut index: u32 = 0;
+
+        loop {
+            if index == adjacent_coords.len() {
+                break;
+            };
+
+            let (x, y) = *adjacent_coords.at(index);
+
+            if x > board_size || y > board_size {
+                index += 1;
+                continue;
+            };
+
+            let point = get!(ctx.world, (self.game_id, x, y), (Point));
+            if point.owned_by == Option::<Color>::None {
+                has_liberties = true;
+                break;
+            };
+            index += 1;
         };
 
-        let point_right = get!(ctx.world, (self.game_id, self.x + 1, self.y), (Point));
-        if point_left.owned_by == Option::<Color>::None {
-            return true;
-        };
-
-        let point_top = get!(ctx.world, (self.game_id, self.x, self.y + 1), (Point));
-        if point_top.owned_by == Option::<Color>::None {
-            return true;
-        };
-
-        let point_bottom = get!(ctx.world, (self.game_id, self.x, self.y - 1), (Point));
-        if point_bottom.owned_by == Option::<Color>::None {
-            return true;
-        };
-
-        false
+        has_liberties
     }
 }
 

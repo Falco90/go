@@ -13,6 +13,19 @@ struct Point {
     owned_by: Option<Color>
 }
 
+#[generate_trait]
+impl PointTraitImpl of PointTrait {
+    fn get_adjacent_coords(self: Point) -> Array<(u32, u32)> {
+        let mut adjacent_coords = ArrayTrait::<(u32, u32)>::new();
+        adjacent_coords.append((self.x + 1, self.y));
+        adjacent_coords.append((self.x - 1, self.y));
+        adjacent_coords.append((self.x, self.y + 1));
+        adjacent_coords.append((self.x, self.y - 1));
+
+        adjacent_coords
+    }
+}
+
 #[derive(Component, Copy, Drop, Serde, PartialEq)]
 enum Color {
     White,
