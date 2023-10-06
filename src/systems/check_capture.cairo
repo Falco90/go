@@ -22,30 +22,28 @@ mod check_capture_system {
 
         let point = get!(ctx.world, (game_id, x, y), (Point));
 
+        let adjacent_coords = point.get_adjacent_coords(game.board_size);
+        let mut index: u32 = 0;
+
         loop {
-            let mut visited: Felt252Dict<u8> = Default::default();
-            if has_liberties(point, ctx, game.board_size, opponent, ref visited) {
+            if index == adjacent_coords.len() {
                 break;
             };
-            let adjacent_coords = point.get_adjacent_coords(game.board_size);
-            let mut index: u32 = 0;
+            let (x, y) = *adjacent_coords.at(index);
+            let adjacent_point = get!(ctx.world, (game_id, x, y), (Point));
+            let mut visited: Felt252Dict<u8> = Default::default();
+            if !has_liberties(adjacent_point, ctx, game.board_size, opponent, ref visited) {
+                'has no liberties'.print();
 
-            loop {
-                if index == adjacent_coords.len() {
-                    break;
-                };
-                let (x, y) = *adjacent_coords.at(index);
-                let point = get!(ctx.world, (game_id, x, y), (Point));
+                //if no liberties, capture!!
             };
-        }
+
+            index += 1;
+        };
     }
 
     fn has_liberties(
-        point: Point,
-        ctx: Context,
-        board_size: u32,
-        opponent: Color,
-        ref visited: Felt252Dict<u8>
+        point: Point, ctx: Context, board_size: u32, opponent: Color, ref visited: Felt252Dict<u8>
     ) -> bool {
         let adjacent_coords: Array<(u32, u32)> = point.get_adjacent_coords(board_size);
         let mut has_liberties: bool = false;
