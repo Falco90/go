@@ -15,12 +15,21 @@ struct Point {
 
 #[generate_trait]
 impl PointTraitImpl of PointTrait {
-    fn get_adjacent_coords(self: Point) -> Array<(u32, u32)> {
+    fn get_adjacent_coords(self: Point, board_size: u32) -> Array<(u32, u32)> {
         let mut adjacent_coords = ArrayTrait::<(u32, u32)>::new();
-        adjacent_coords.append((self.x + 1, self.y));
-        adjacent_coords.append((self.x - 1, self.y));
-        adjacent_coords.append((self.x, self.y + 1));
-        adjacent_coords.append((self.x, self.y - 1));
+
+        if self.x + 1 < board_size {
+            adjacent_coords.append((self.x + 1, self.y));
+        }
+        if self.x - 1 >= 0 {
+            adjacent_coords.append((self.x - 1, self.y));
+        }
+        if self.y + 1 < board_size {
+            adjacent_coords.append((self.x, self.y + 1));
+        }
+        if self.y - 1 >= 0 {
+            adjacent_coords.append((self.x, self.y - 1));
+        }
 
         adjacent_coords
     }

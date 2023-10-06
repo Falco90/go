@@ -100,8 +100,8 @@ mod check_capture_system {
     }
 
     fn has_liberties(self: Point, ctx: Context, game_id: felt252, board_size: u32) -> bool {
-        let adjacent_coords = self.get_adjacent_coords();
-        let mut has_liberties = false;
+        let adjacent_coords: Array<(u32, u32)> = self.get_adjacent_coords();
+        let mut has_liberties: bool = false;
         let mut index: u32 = 0;
 
         loop {
@@ -110,17 +110,13 @@ mod check_capture_system {
             };
 
             let (x, y) = *adjacent_coords.at(index);
-
-            if x > board_size || y > board_size {
-                index += 1;
-                continue;
-            };
-
             let point = get!(ctx.world, (self.game_id, x, y), (Point));
+
             if point.owned_by == Option::<Color>::None {
                 has_liberties = true;
                 break;
             };
+
             index += 1;
         };
 
