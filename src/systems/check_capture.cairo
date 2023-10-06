@@ -13,10 +13,6 @@ mod check_capture_system {
 
 
     fn execute(ctx: Context, game_id: felt252, x: u32, y: u32, caller: ContractAddress) {
-        //Check for points left, right, top and bottom to see if they have liberties. Call has_liberties(point_right) etc..
-        //If not, check if the stones near them with the same color have liberties.
-        //Repeat for all the connected stones
-        //If none of the connected stones of the same color have liberties. Capture all of them -> remove them from the board and add points
         let game: Game = get!(ctx.world, (game_id), (Game));
         let mut opponent: Color = Color::White;
 
@@ -24,98 +20,66 @@ mod check_capture_system {
             opponent = Color::Black;
         }
 
-        // Point to the right
-        let point_right: Point = get!(ctx.world, (game_id, x + 1, y), (Point));
+        let point = get!(ctx.world, (game_id, x, y), (Point));
 
-        match point_right.owned_by {
-            Option::Some(owner) => {
-                if owner == opponent && !has_liberties(point_right, ctx, game_id, game.board_size) {
-                    // if all connected points are checked and none of them have liberties, capture
-                    //Keep track of things to capture
-                    let mut prisoners: Felt252Dict<Nullable<Point>> = Default::default();
-                    //create stack for recursive algoritm
-                    let mut stack: Array<Point> = ArrayTrait::<Point>::new();
+        loop {
+            let mut visited: Felt252Dict<u8> = Default::default();
+            if has_liberties(point, ctx, game.board_size, opponent, ref visited) {
+                break;
+            };
+            let adjacent_coords = point.get_adjacent_coords(game.board_size);
+            let mut index: u32 = 0;
 
-                    let mut index: u32 = 0;
-
-                    let mut point: Point = get!(
-                        ctx.world, (game_id, point_right.x + 1, point_right.y), (Point)
-                    );
-
-                    //loop through the stack.
-                    loop {
-                        match stack.pop_front() {
-                            Option::Some(point) => {
-                                if has_liberties(point, ctx, game_id, game.board_size) {
-                                    break;
-                                }
-                                let new_point = get!(
-                                    ctx.world, (game_id, point.x + 1, point.y), (Point)
-                                );
-                                match new_point.owned_by {
-                                    Option::Some(owner) => {
-                                        if owner == opponent {
-                                            stack.append(point);
-                                        }
-                                    },
-                                    Option::None(_) => {
-                                        break;
-                                    }
-                                }
-                            },
-                            Option::None(_) => {
-                                break;
-                            }
-                        }
-
-                        stack.append(point);
-                        prisoners.insert(index.into(), nullable_from_box(BoxTrait::new(point)));
-                    }
-                }
-            },
-            Option::None(_) => {}
-        }
-
-        if !has_liberties(point_right, ctx, game_id, game.board_size) {
-            match point_right.owned_by {
-                Option::Some(owner) => {
-                    match owner {
-                        Color::White => {},
-                        Color::Black => {
-                            set!(
-                                ctx.world,
-                                (Point {
-                                    game_id: game_id,
-                                    x: x + 1,
-                                    y: y,
-                                    owned_by: Option::Some(Color::White(()))
-                                })
-                            );
-                        },
-                    }
-                },
-                Option::None(_) => {}
+            loop {
+                if index == adjacent_coords.len() {
+                    break;
+                };
+                let (x, y) = *adjacent_coords.at(index);
+                let point = get!(ctx.world, (game_id, x, y), (Point));
             };
         }
     }
 
-    fn has_liberties(self: Point, ctx: Context, game_id: felt252, board_size: u32) -> bool {
-        let adjacent_coords: Array<(u32, u32)> = self.get_adjacent_coords();
+    fn has_liberties(
+        point: Point,
+        ctx: Context,
+        board_size: u32,
+        opponent: Color,
+        ref visited: Felt252Dict<u8>
+    ) -> bool {
+        let adjacent_coords: Array<(u32, u32)> = point.get_adjacent_coords(board_size);
         let mut has_liberties: bool = false;
         let mut index: u32 = 0;
 
+        let id = point.create_unique_identifier();
+        visited.insert(id, 1);
+
+        let mut key: felt252 = point.x.into();
         loop {
             if index == adjacent_coords.len() {
                 break;
             };
 
             let (x, y) = *adjacent_coords.at(index);
-            let point = get!(ctx.world, (self.game_id, x, y), (Point));
+            let adjacent_point = get!(ctx.world, (point.game_id, x, y), (Point));
+            let adjacent_point_id = adjacent_point.create_unique_identifier();
 
-            if point.owned_by == Option::<Color>::None {
-                has_liberties = true;
-                break;
-            };
+            let already_visited = visited.get(adjacent_point_id) == 1;
+
+            match adjacent_point.owned_by {
+                Option::Some(owner) => {
+                    if owner == opponent && !already_visited {
+                        if has_liberties(adjacent_point, ctx, board_size, opponent, ref visited) {
+                            has_liberties = true;
+                            break;
+                        };
+                    };
+                },
+                Option::None(_) => {
+                    has_liberties = true;
+                    break;
+                }
+            }
 
             index += 1;
         };

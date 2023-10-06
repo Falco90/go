@@ -33,6 +33,10 @@ impl PointTraitImpl of PointTrait {
 
         adjacent_coords
     }
+
+    fn create_unique_identifier(self: Point) -> felt252 {
+        ((self.x + self.y) * (self.x + self.y + 1) / 2 + self.y).into()
+    }
 }
 
 #[derive(Component, Copy, Drop, Serde, PartialEq)]
