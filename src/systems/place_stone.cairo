@@ -101,6 +101,13 @@ mod place_stone_system {
 
         is_self_capture
     }
+
+    fn is_ko(ctx: Context, point: Point, color: Color, board_size: u32) -> bool {
+        let mut is_ko = true;
+
+        // implement ko rule check
+        is_ko
+    }
 }
 
 #[cfg(test)]

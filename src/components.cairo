@@ -63,6 +63,25 @@ struct GameTurn {
 }
 
 #[derive(Component, Drop, Serde, SerdeLen)]
+struct LastMove {
+    #[key]
+    game_id: felt252,
+    #[key]
+    color: Color,
+    x: u32,
+    y: u32
+}
+
+#[derive(Component, Drop, Serde, SerdeLen)]
+struct Passes {
+    #[key]
+    game_id: felt252,
+    #[key]
+    color: Color,
+    consecutive_passes: u32
+}
+
+#[derive(Component, Drop, Serde, SerdeLen)]
 struct Score {
     #[key]
     game_id: felt252,
