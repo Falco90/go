@@ -68,8 +68,7 @@ struct LastMove {
     game_id: felt252,
     #[key]
     color: Color,
-    x: u32,
-    y: u32
+    coords: Option<(u32, u32)>
 }
 
 #[derive(Component, Drop, Serde, SerdeLen)]
@@ -93,6 +92,13 @@ struct Score {
 }
 
 impl ColorOptionSerdeLen of dojo::SerdeLen<Option<Color>> {
+    #[inline(always)]
+    fn len() -> usize {
+        2
+    }
+}
+
+impl CoordsOptionSerdeLen of dojo::SerdeLen<Option<(u32, u32)>> {
     #[inline(always)]
     fn len() -> usize {
         2
@@ -126,6 +132,22 @@ impl ColorOptionPrintTrait of PrintTrait<Option<Color>> {
         match self {
             Option::Some(color) => {
                 color.print();
+            },
+            Option::None(_) => {
+                'None'.print();
+            }
+        }
+    }
+}
+
+impl CoordsOptionPrintTrait of PrintTrait<Option<(u32, u32)>> {
+    #[inline(always)]
+    fn print(self: Option<(u32, u32)>) {
+        match self {
+            Option::Some(coords) => {
+                let (x, y) = coords;
+                x.print();
+                y.print();
             },
             Option::None(_) => {
                 'None'.print();

@@ -5,7 +5,7 @@ mod initiate_system {
     use traits::Into;
     use dojo::world::Context;
     use starknet::ContractAddress;
-    use go::components::{Game, GameTurn, Color, Point, Score};
+    use go::components::{Game, GameTurn, Color, Point, Score, LastMove, Passes};
     use core::pedersen::{pedersen};
 
     fn execute(
@@ -29,6 +29,10 @@ mod initiate_system {
                 GameTurn { game_id: game_id, turn: Color::White(()) },
                 Score { game_id: game_id, color: Color::White, territories: 0, prisoners: 0, komi: 0},
                 Score { game_id: game_id, color: Color::Black, territories: 0, prisoners: 0, komi: 0},
+                Passes { game_id, color: Color::White, consecutive_passes: 0},
+                Passes { game_id, color: Color::Black, consecutive_passes: 0},
+                LastMove { game_id, color: Color::White, coords: Option::None},
+                LastMove { game_id, color: Color::Black, coords: Option::None},
             )
         );
 
@@ -59,7 +63,7 @@ mod initiate_system {
 mod tests {
     use starknet::ContractAddress;
     use dojo::test_utils::spawn_test_world;
-    use go::components::{Game, game, Point, point, GameTurn, game_turn, Color, Score, score};
+    use go::components::{Game, game, Point, point, GameTurn, game_turn, Color, Score, score, LastMove, last_move, Passes, passes};
 
     use go::systems::initiate_system;
     use array::ArrayTrait;
@@ -81,6 +85,8 @@ mod tests {
         components.append(game_turn::TEST_CLASS_HASH);
         components.append(point::TEST_CLASS_HASH);
         components.append(score::TEST_CLASS_HASH);
+        components.append(last_move::TEST_CLASS_HASH);
+        components.append(passes::TEST_CLASS_HASH);
 
         //systems
         let mut systems = array::ArrayTrait::new();
@@ -123,5 +129,36 @@ mod tests {
         assert(score.territories == 0, 'should be 0');
         assert(score.prisoners == 0, 'should be 0');
         assert(score.komi == 0, 'should be 0');
+
+        //check last move Black
+        let last_move = get!(world, (game_id, Color::Black), (LastMove));
+        match last_move.coords {
+            Option::Some(coords) => {
+                assert(false, 'should not have last move');
+            },
+            Option::None(_) => {
+                assert(true, 'should not have last move')
+            }
+        }
+
+        //check last move White
+        let last_move = get!(world, (game_id, Color::White), (LastMove));
+        match last_move.coords {
+            Option::Some(coords) => {
+                assert(false, 'should not have last move');
+            },
+            Option::None(_) => {
+                assert(true, 'should not have last move')
+            }
+        }
+
+        //check passes White
+        let passes = get!(world, (game_id, Color::White), (Passes));
+        assert(passes.consecutive_passes == 0, 'should have 0 passes');
+
+        //check passes Black
+        let passes = get!(world, (game_id, Color::Black), (Passes));
+        assert(passes.consecutive_passes == 0, 'should have 0 passes');
+
     }
 }
