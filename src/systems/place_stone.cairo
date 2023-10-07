@@ -2,17 +2,25 @@
 mod place_stone_system {
     use dojo::world::Context;
     use starknet::ContractAddress;
-    use go::components::{Game, GameTurn, Color, Point};
+    use go::components::{Game, GameTurn, Color, Point, PointTrait};
+    use debug::PrintTrait;
 
 
     fn execute(ctx: Context, x: u32, y: u32, caller: ContractAddress, game_id: felt252) {
         let mut game = get!(ctx.world, (game_id), (Game));
+        let mut player = Color::Black;
+
+        if game.white == caller {
+            player = Color::White;
+        };
+
         let mut game_turn = get!(ctx.world, (game_id), (GameTurn));
         let point = get!(ctx.world, (game_id, x, y), (Point));
 
         assert(is_correct_turn(caller, ref game_turn, ref game), 'Not correct turn');
         assert(!is_out_of_board(x, y, game.board_size), 'Should be inside board');
         assert(is_point_empty(point), 'Point should be empty');
+        assert(!is_self_capture(ctx, point, player, game.board_size), 'Cannot self capture');
 
         match game_turn.turn {
             Color::White => {
@@ -64,6 +72,35 @@ mod place_stone_system {
         }
         false
     }
+
+    fn is_self_capture(ctx: Context, point: Point, color: Color, board_size: u32) -> bool {
+        let adjacent_coords: Array<(u32, u32)> = point.get_adjacent_coords(board_size);
+        let mut is_self_capture = true;
+        let mut index: u32 = 0;
+        loop {
+            if index == adjacent_coords.len() {
+                break;
+            };
+            let (x, y) = *adjacent_coords.at(index);
+            let adjacent_point = get!(ctx.world, (point.game_id, x, y), (Point));
+            match adjacent_point.owned_by {
+                Option::Some(owner) => {
+                    if owner == color {
+                        is_self_capture = false;
+                        break;
+                    }
+                },
+                Option::None(_) => {
+                    is_self_capture = false;
+                    break;
+                }
+            };
+
+            index += 1;
+        };
+
+        is_self_capture
+    }
 }
 
 #[cfg(test)]
@@ -111,21 +148,21 @@ mod tests {
 
         let game_id = pedersen(white.into(), black.into());
 
-        // Place white stone in [3,3]
+        // Place white stone in [0,1]
         let mut place_stone_calldata = array::ArrayTrait::<core::felt252>::new();
-        place_stone_calldata.append(3);
-        place_stone_calldata.append(3);
+        place_stone_calldata.append(0);
+        place_stone_calldata.append(1);
         place_stone_calldata.append(white.into());
         place_stone_calldata.append(game_id);
         world.execute('place_stone_system'.into(), place_stone_calldata);
 
         //White stone is in (3,3)
-        let point = get!(world, (game_id, 3, 3), (Point));
+        let point = get!(world, (game_id, 0, 1), (Point));
         match point.owned_by {
             Option::Some(owner) => {
-                assert(owner == Color::White, '[3,3] should be owned by white');
+                assert(owner == Color::White, '[0,1] should be owned by white');
             },
-            Option::None(_) => assert(false, 'should have stone in [3,3]'),
+            Option::None(_) => assert(false, 'should have stone in [0,1]'),
         };
 
         // Change turn to Black
@@ -160,7 +197,7 @@ mod tests {
             Option::None(_) => assert(false, 'should have stone in [4,3]'),
         };
 
-        // Change turn to Black
+        // Change turn to White
         let mut change_turn_calldata = array::ArrayTrait::<core::felt252>::new();
         change_turn_calldata.append(black.into());
         change_turn_calldata.append(game_id);
@@ -173,6 +210,37 @@ mod tests {
             Color::Black => {
                 assert(false, 'Should be white turn');
             },
+        };
+
+        // Place white stone in [1,0]
+        let mut place_stone_calldata = array::ArrayTrait::<core::felt252>::new();
+        place_stone_calldata.append(1);
+        place_stone_calldata.append(0);
+        place_stone_calldata.append(white.into());
+        place_stone_calldata.append(game_id);
+        world.execute('place_stone_system'.into(), place_stone_calldata);
+
+        // Change turn to Black
+        let mut change_turn_calldata = array::ArrayTrait::<core::felt252>::new();
+        change_turn_calldata.append(white.into());
+        change_turn_calldata.append(game_id);
+        world.execute('change_turn_system'.into(), change_turn_calldata);
+
+        //Place Black stone in [0,0]
+        let mut place_stone_calldata_2 = array::ArrayTrait::<core::felt252>::new();
+        place_stone_calldata_2.append(5);
+        place_stone_calldata_2.append(5);
+        place_stone_calldata_2.append(black.into());
+        place_stone_calldata_2.append(game_id);
+        world.execute('place_stone_system'.into(), place_stone_calldata_2);
+
+        //Check Black stone in [0,0] is empty due to no-self-capture rule
+        let point_2 = get!(world, (game_id, 0, 0), (Point));
+        match point_2.owned_by {
+            Option::Some(owner) => {
+                assert(false, '[0,0] should not be owned');
+            },
+            Option::None(_) => assert(true, 'should not have stone in 0,0'),
         };
     }
 }
