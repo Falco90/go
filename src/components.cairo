@@ -66,8 +66,11 @@ struct GameTurn {
 struct Score {
     #[key]
     game_id: felt252,
-    white: u32,
-    black: u32
+    #[key]
+    color: Color,
+    territories: u32,
+    prisoners: u32,
+    komi: u32
 }
 
 impl ColorOptionSerdeLen of dojo::SerdeLen<Option<Color>> {

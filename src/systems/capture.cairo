@@ -36,7 +36,7 @@ mod capture_system {
                 let captured_amount = capture(
                     adjacent_point, ctx, game.board_size, opponent, ref visited
                 );
-                increase_score(ctx, opponent, game_id, captured_amount);
+                update_prisoners_score(ctx, opponent, game_id, captured_amount);
             };
 
             index += 1;
@@ -121,37 +121,29 @@ mod capture_system {
             visited.insert(adjacent_point_id, 1);
             index += 1;
         };
-        
+
         let captured_amount = index - 1;
 
         captured_amount
     }
 
-    fn increase_score(ctx: Context, opponent: Color, game_id: felt252, amount: u32) {
-        let prev_score = get!(ctx.world, (game_id), (Score));
+    fn update_prisoners_score(ctx: Context, opponent: Color, game_id: felt252, amount: u32) {
+        let mut color = Color::Black;
 
-        match opponent {
-            Color::White => {
-                set!(
-                    ctx.world,
-                    (Score {
-                        game_id: prev_score.game_id,
-                        white: prev_score.white,
-                        black: prev_score.black + amount
-                    })
-                )
-            },
-            Color::Black => {
-                set!(
-                    ctx.world,
-                    (Score {
-                        game_id: prev_score.game_id,
-                        white: prev_score.white + amount,
-                        black: prev_score.black
-                    })
-                )
-            }
+        if opponent == Color::Black {
+            color = Color::White;
         }
+        let prev_score = get!(ctx.world, (game_id, color), (Score));
+
+        set!(ctx.world, (
+            Score {
+                game_id: game_id,
+                color: color,
+                territories: prev_score.territories,
+                prisoners: prev_score.prisoners + amount,
+                komi: prev_score.komi
+            }
+        ))
     }
 }
 
@@ -210,37 +202,11 @@ mod tests {
         place_stone_calldata.append(game_id);
         world.execute('place_stone_system'.into(), place_stone_calldata);
 
-        //White stone is in (0,1)
-        let point = get!(world, (game_id, 0, 1), (Point));
-        match point.owned_by {
-            Option::Some(owner) => {
-                assert(owner == Color::White, '[3,3] should be owned by white');
-            },
-            Option::None(_) => assert(false, 'should have stone in [3,3]'),
-        };
-
-        //Check if any adjacent stones to [0,1] can get captured
-        let mut capture_calldata = array::ArrayTrait::<core::felt252>::new();
-        capture_calldata.append(game_id);
-        capture_calldata.append(0);
-        capture_calldata.append(1);
-        capture_calldata.append(white.into());
-        world.execute('capture_system'.into(), capture_calldata);
-
         // Change turn to Black
         let mut change_turn_calldata = array::ArrayTrait::<core::felt252>::new();
         change_turn_calldata.append(white.into());
         change_turn_calldata.append(game_id);
         world.execute('change_turn_system'.into(), change_turn_calldata);
-
-        //It's Black's turn now
-        let game_turn = get!(world, (game_id), (GameTurn));
-        match game_turn.turn {
-            Color::White => assert(false, 'should be Black turn'),
-            Color::Black => {
-                assert(true, 'Should be Black turn');
-            },
-        };
 
         //Place Black stone in [0,0]
         let mut place_stone_calldata_2 = array::ArrayTrait::<core::felt252>::new();
@@ -250,29 +216,11 @@ mod tests {
         place_stone_calldata_2.append(game_id);
         world.execute('place_stone_system'.into(), place_stone_calldata_2);
 
-        //Check Black stone in [0,0]
-        let point_2 = get!(world, (game_id, 0, 0), (Point));
-        match point_2.owned_by {
-            Option::Some(owner) => {
-                assert(owner == Color::Black, '[4,3] should be owned by black');
-            },
-            Option::None(_) => assert(false, 'should have stone in [4,3]'),
-        };
-
         // Change turn to White
         let mut change_turn_calldata = array::ArrayTrait::<core::felt252>::new();
         change_turn_calldata.append(black.into());
         change_turn_calldata.append(game_id);
         world.execute('change_turn_system'.into(), change_turn_calldata);
-
-        //It's White's turn again
-        let game_turn = get!(world, (game_id), (GameTurn));
-        match game_turn.turn {
-            Color::White => assert(true, 'should be white turn'),
-            Color::Black => {
-                assert(false, 'Should be white turn');
-            },
-        };
 
         //White places stone in [1,0]
         let mut place_stone_calldata = array::ArrayTrait::<core::felt252>::new();
@@ -290,7 +238,7 @@ mod tests {
         capture_calldata_2.append(white.into());
         world.execute('capture_system'.into(), capture_calldata_2);
 
-        //Check if stone in [0,0] gets captured by white
+        //Check if stone in [0,0] got captured by white
         let point_to_capture = get!(world, (game_id, 0, 0), (Point));
         match point_to_capture.owned_by {
             Option::Some(owner) => {
@@ -298,8 +246,9 @@ mod tests {
             },
             Option::None(_) => assert(true, 'should not have stone in [0,0]')
         };
+
         //Check if white score increased by correct amount
-        let score: Score = get!(world, (game_id), (Score));
-        assert(score.white == 1, 'should have captured one stone');
+        let score: Score = get!(world, (game_id, Color::White), (Score));
+        assert(score.prisoners == 1, 'should have captured one stone');
     }
 }

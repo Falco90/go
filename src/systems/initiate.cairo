@@ -27,7 +27,8 @@ mod initiate_system {
                     board_size: board_size,
                 },
                 GameTurn { game_id: game_id, turn: Color::White(()) },
-                Score { game_id: game_id, white: 0, black: 0}
+                Score { game_id: game_id, color: Color::White, territories: 0, prisoners: 0, komi: 0},
+                Score { game_id: game_id, color: Color::Black, territories: 0, prisoners: 0, komi: 0},
             )
         );
 
@@ -58,7 +59,7 @@ mod initiate_system {
 mod tests {
     use starknet::ContractAddress;
     use dojo::test_utils::spawn_test_world;
-    use go::components::{Game, game, Point, point, GameTurn, game_turn, Score, score};
+    use go::components::{Game, game, Point, point, GameTurn, game_turn, Color, Score, score};
 
     use go::systems::initiate_system;
     use array::ArrayTrait;
@@ -118,7 +119,9 @@ mod tests {
         };
 
         //get score
-        let score = get!(world, (game_id), (Score));
-        assert(score.white == 0, 'should be 0');
+        let score = get!(world, (game_id, Color::White), (Score));
+        assert(score.territories == 0, 'should be 0');
+        assert(score.prisoners == 0, 'should be 0');
+        assert(score.komi == 0, 'should be 0');
     }
 }
