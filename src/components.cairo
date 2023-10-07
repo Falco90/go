@@ -68,16 +68,8 @@ struct LastMove {
     game_id: felt252,
     #[key]
     color: Color,
-    coords: Option<(u32, u32)>
-}
-
-#[derive(Component, Drop, Serde, SerdeLen)]
-struct Passes {
-    #[key]
-    game_id: felt252,
-    #[key]
-    color: Color,
-    consecutive_passes: u32
+    coords: Option<(u32, u32)>,
+    passed: bool
 }
 
 #[derive(Component, Drop, Serde, SerdeLen)]
