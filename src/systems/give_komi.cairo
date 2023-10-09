@@ -11,7 +11,7 @@ mod give_komi_system {
             (Score {
                 game_id: game_id,
                 color: Color::White,
-                territories: prev_score.white,
+                territories: prev_score.territories,
                 prisoners: prev_score.prisoners,
                 komi: amount
             })
