@@ -13,32 +13,6 @@ struct Point {
     owned_by: Option<Color>
 }
 
-#[generate_trait]
-impl PointTraitImpl of PointTrait {
-    fn get_adjacent_coords(self: Point, board_size: u32) -> Array<(u32, u32)> {
-        let mut adjacent_coords = ArrayTrait::<(u32, u32)>::new();
-
-        if self.x + 1 < board_size {
-            adjacent_coords.append((self.x + 1, self.y));
-        }
-        if self.x > 0 {
-            adjacent_coords.append((self.x - 1, self.y));
-        }
-        if self.y + 1 < board_size {
-            adjacent_coords.append((self.x, self.y + 1));
-        }
-        if self.y > 0 {
-            adjacent_coords.append((self.x, self.y - 1));
-        }
-
-        adjacent_coords
-    }
-
-    fn create_unique_identifier(self: Point) -> felt252 {
-        ((self.x + self.y) * (self.x + self.y + 1) / 2 + self.y).into()
-    }
-}
-
 #[derive(Component, Copy, Drop, Serde, PartialEq)]
 enum Color {
     White,
@@ -81,6 +55,32 @@ struct Score {
     territories: u32,
     prisoners: u32,
     komi: u32
+}
+
+#[generate_trait]
+impl PointTraitImpl of PointTrait {
+    fn get_adjacent_coords(self: Point, board_size: u32) -> Array<(u32, u32)> {
+        let mut adjacent_coords = ArrayTrait::<(u32, u32)>::new();
+
+        if self.x + 1 < board_size {
+            adjacent_coords.append((self.x + 1, self.y));
+        }
+        if self.x > 0 {
+            adjacent_coords.append((self.x - 1, self.y));
+        }
+        if self.y + 1 < board_size {
+            adjacent_coords.append((self.x, self.y + 1));
+        }
+        if self.y > 0 {
+            adjacent_coords.append((self.x, self.y - 1));
+        }
+
+        adjacent_coords
+    }
+
+    fn create_unique_identifier(self: Point) -> felt252 {
+        ((self.x + self.y) * (self.x + self.y + 1) / 2 + self.y).into()
+    }
 }
 
 impl ColorOptionSerdeLen of dojo::SerdeLen<Option<Color>> {
