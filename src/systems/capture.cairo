@@ -1,4 +1,3 @@
-//Check if the placed stone triggers a capture by checking if the adjacent string has any room left.
 #[system]
 mod capture_system {
     use go::components::PointTrait;
@@ -135,15 +134,16 @@ mod capture_system {
         }
         let prev_score = get!(ctx.world, (game_id, color), (Score));
 
-        set!(ctx.world, (
-            Score {
+        set!(
+            ctx.world,
+            (Score {
                 game_id: game_id,
                 color: color,
                 territories: prev_score.territories,
                 prisoners: prev_score.prisoners + amount,
                 komi: prev_score.komi
-            }
-        ))
+            })
+        )
     }
 }
 
@@ -157,6 +157,7 @@ mod tests {
     use go::systems::place_stone_system;
     use go::systems::change_turn_system;
     use go::systems::capture_system;
+    use go::systems::calculate_score_system;
     use array::ArrayTrait;
     use core::traits::Into;
     use dojo::world::IWorldDispatcherTrait;
@@ -183,6 +184,7 @@ mod tests {
         systems.append(place_stone_system::TEST_CLASS_HASH);
         systems.append(change_turn_system::TEST_CLASS_HASH);
         systems.append(capture_system::TEST_CLASS_HASH);
+        systems.append(calculate_score_system::TEST_CLASS_HASH);
         let world = spawn_test_world(components, systems);
 
         // initiate
@@ -250,5 +252,11 @@ mod tests {
         //Check if white score increased by correct amount
         let score: Score = get!(world, (game_id, Color::White), (Score));
         assert(score.prisoners == 1, 'should have captured one stone');
+
+        //calculate territories
+        let mut calculate_score_calldata = array::ArrayTrait::<core::felt252>::new();
+        calculate_score_calldata.append(game_id);
+        calculate_score_calldata.append(white.into());
+        world.execute('calculate_score_system'.into(), calculate_score_calldata);
     }
 }
