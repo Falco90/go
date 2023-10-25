@@ -36,7 +36,6 @@ mod initiate_system {
 
         let mut x: usize = 0;
         let mut y: usize = 0;
-        let mut index: u32 = 0;
 
         loop {
             if y >= board_size {
@@ -50,7 +49,6 @@ mod initiate_system {
                 }
                 set!(ctx.world, (Point { game_id, x, y, owned_by: Option::None(()) }));
                 x += 1;
-                index += 1;
             };
         };
     }
